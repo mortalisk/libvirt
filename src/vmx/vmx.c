@@ -519,6 +519,15 @@ VIR_ENUM_IMPL(virVMXControllerModelSCSI, VIR_DOMAIN_CONTROLLER_MODEL_SCSI_LAST,
               "UNUSED virtio-scsi",
               "UNUSED lsisas1078");
 
+VIR_ENUM_DECL(virVMXControllerModel)
+VIR_ENUM_IMPL(virVMXControllerModel, VIR_DOMAIN_CONTROLLER_MODEL_PCI_LAST,
+              "",
+              "UNKNOWN PCIE_ROOT",
+              "UNKNOWN PCI_BRDIGE",
+              "UNKNOWN DMI_TO_PCI_BRIDGE",
+              "pcieRootPort",
+              "UNKNOWN PCIE_SWITCH_UPSTREAM_PORT",
+              "UNKNOWN PCIE_SWITCH_DOWNSTREAM_PORT");
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Helpers
@@ -1292,6 +1301,10 @@ virVMXParseConfig(virVMXContext *ctx,
     char *sched_cpu_shares = NULL;
     char *guestOS = NULL;
     bool smbios_reflecthost = false;
+    int pcibridge;
+    char *virtualdev;
+    char* present_config;
+    char* dev_config;
     int controller;
     int bus;
     int port;
@@ -1584,6 +1597,43 @@ virVMXParseConfig(virVMXContext *ctx,
     if (smbios_reflecthost)
         def->os.smbios_mode = VIR_DOMAIN_SMBIOS_HOST;
 
+    for (pcibridge = 0; pcibridge < 8; ++pcibridge) {
+        if (virAsprintf(&present_config,
+                        "pciBridge%d.present", pcibridge) < 0) {
+            goto cleanup;
+        }
+        bool is_present;
+        if (virVMXGetConfigBoolean(conf, present_config,
+                                   &is_present, false, true) < 0) {
+            goto cleanup;
+        }
+        if (!is_present)
+            continue ;
+        if (virAsprintf(&dev_config,
+                        "pciBridge%d.virtualDev", pcibridge) < 0) {
+            goto cleanup;
+        }
+
+        if (virVMXGetConfigString(conf, dev_config, &virtualdev,
+                                  true) < 0) {
+            goto cleanup;
+        }
+
+        int model;
+        if (virtualdev != NULL) {
+            model = virVMXControllerModelTypeFromString(virtualdev);
+            if (model < 0)
+                goto cleanup;
+        } else {
+            model = VIR_DOMAIN_CONTROLLER_MODEL_PCI_ROOT;
+        }
+
+        if (virDomainDefMaybeAddController(def,
+                                           VIR_DOMAIN_CONTROLLER_TYPE_PCI,
+                                           pcibridge, model) < 0)
+            goto cleanup;
+    }
+
     /* def:features */
     /* FIXME */
 
@@ -1832,6 +1882,9 @@ virVMXParseConfig(virVMXContext *ctx,
     VIR_FREE(sched_cpu_affinity);
     VIR_FREE(sched_cpu_shares);
     VIR_FREE(guestOS);
+    VIR_FREE(virtualdev);
+    VIR_FREE(present_config);
+    VIR_FREE(dev_config);
 
     return def;
 }
@@ -3254,6 +3307,26 @@ virVMXFormatConfig(virVMXContext *ctx, virDomainXMLOptionPtr xmlopt, virDomainDe
         } else {
             virBufferAsprintf(&buffer, "sched.cpu.shares = \"%lu\"\n",
                               def->cputune.shares);
+        }
+    }
+
+    for (i = 0; i < def->ncontrollers; ++i) {
+        if (def->controllers[i]->type == VIR_DOMAIN_CONTROLLER_TYPE_PCI) {
+            if ((def->controllers[i]->model == VIR_DOMAIN_CONTROLLER_MODEL_PCI_ROOT)
+                || (def->controllers[i]->model == VIR_DOMAIN_CONTROLLER_MODEL_PCIE_ROOT_PORT)){
+                virBufferAsprintf(&buffer,
+                                  "pciBridge%d.present = \"true\"\n",
+                                  def->controllers[i]->idx);
+                if (def->controllers[i]->model == VIR_DOMAIN_CONTROLLER_MODEL_PCIE_ROOT_PORT) {
+                    virBufferAsprintf(&buffer,
+                                      "pciBridge%d.virtualDev = \"%s\"\n",
+                                      def->controllers[i]->idx,
+                                      virVMXControllerModelTypeToString(def->controllers[i]->model));
+                    virBufferAsprintf(&buffer,
+                                      "pciBridge%d.functions = \"8\"\n",
+                                      def->controllers[i]->idx);
+                }
+            }
         }
     }
 
