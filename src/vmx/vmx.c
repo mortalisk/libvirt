@@ -1299,7 +1299,6 @@ virVMXParseConfig(virVMXContext *ctx,
     long long numvcpus = 0;
     char *sched_cpu_affinity = NULL;
     char *sched_cpu_shares = NULL;
-    char *guestOS = NULL;
     bool smbios_reflecthost = false;
     int pcibridge;
     char *virtualdev;
@@ -1579,10 +1578,10 @@ virVMXParseConfig(virVMXContext *ctx,
     def->os.type = VIR_DOMAIN_OSTYPE_HVM;
 
     /* vmx:guestOS -> def:os.arch */
-    if (virVMXGetConfigString(conf, "guestOS", &guestOS, true) < 0)
+    if (virVMXGetConfigString(conf, "guestOS", &def->os.guestOS, true) < 0)
         goto cleanup;
 
-    if (guestOS != NULL && virFileHasSuffix(guestOS, "-64")) {
+    if (def->os.guestOS != NULL && virFileHasSuffix(def->os.guestOS, "-64")) {
         def->os.arch = VIR_ARCH_X86_64;
     } else {
         def->os.arch = VIR_ARCH_I686;
@@ -1881,7 +1880,7 @@ virVMXParseConfig(virVMXContext *ctx,
     VIR_FREE(encoding);
     VIR_FREE(sched_cpu_affinity);
     VIR_FREE(sched_cpu_shares);
-    VIR_FREE(guestOS);
+
     VIR_FREE(virtualdev);
     VIR_FREE(present_config);
     VIR_FREE(dev_config);
@@ -3164,16 +3163,20 @@ virVMXFormatConfig(virVMXContext *ctx, virDomainXMLOptionPtr xmlopt, virDomainDe
                       virtualHW_version);
 
     /* def:os.arch -> vmx:guestOS */
-    if (def->os.arch == VIR_ARCH_I686) {
-        virBufferAddLit(&buffer, "guestOS = \"other\"\n");
-    } else if (def->os.arch == VIR_ARCH_X86_64) {
-        virBufferAddLit(&buffer, "guestOS = \"other-64\"\n");
+    if (!def->os.guestOS) {
+        if (def->os.arch == VIR_ARCH_I686) {
+            virBufferAddLit(&buffer, "guestOS = \"other\"\n");
+        } else if (def->os.arch == VIR_ARCH_X86_64) {
+            virBufferAddLit(&buffer, "guestOS = \"other-64\"\n");
+        } else {
+            virReportError(VIR_ERR_INTERNAL_ERROR,
+                           _("Expecting domain XML attribute 'arch' of entry 'os/type' "
+                             "to be 'i686' or 'x86_64' but found '%s'"),
+                           virArchToString(def->os.arch));
+            goto cleanup;
+        }
     } else {
-        virReportError(VIR_ERR_INTERNAL_ERROR,
-                       _("Expecting domain XML attribute 'arch' of entry 'os/type' "
-                         "to be 'i686' or 'x86_64' but found '%s'"),
-                       virArchToString(def->os.arch));
-        goto cleanup;
+        virBufferAsprintf(&buffer, "guestOS = \"%s\"\n", def->os.guestOS);
     }
 
     /* def:os.smbios_mode -> vmx:smbios.reflecthost */

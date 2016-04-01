@@ -2585,6 +2585,7 @@ void virDomainDefFree(virDomainDefPtr def)
     VIR_FREE(def->idmap.gidmap);
 
     VIR_FREE(def->os.machine);
+    VIR_FREE(def->os.guestOS);
     VIR_FREE(def->os.init);
     for (i = 0; def->os.initargv && def->os.initargv[i]; i++)
         VIR_FREE(def->os.initargv[i]);
@@ -15089,6 +15090,7 @@ virDomainDefParseXML(xmlDocPtr xml,
     }
     VIR_FREE(tmp);
 
+    def->os.guestOS = virXPathString("string(./os/type[1]/@guestos)", ctxt);
     def->os.machine = virXPathString("string(./os/type[1]/@machine)", ctxt);
     def->emulator = virXPathString("string(./devices/emulator[1])", ctxt);
 
@@ -22303,6 +22305,8 @@ virDomainDefFormatInternal(virDomainDefPtr def,
     virBufferAddLit(buf, "<type");
     if (def->os.arch)
         virBufferAsprintf(buf, " arch='%s'", virArchToString(def->os.arch));
+    if (def->os.guestOS)
+        virBufferAsprintf(buf, " guestos='%s'", def->os.guestOS);
     if (def->os.machine)
         virBufferAsprintf(buf, " machine='%s'", def->os.machine);
     /*

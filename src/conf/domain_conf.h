@@ -1860,6 +1860,8 @@ struct _virDomainOSDef {
     char *bootloaderArgs;
     int smbios_mode;
 
+    char *guestOS;
+
     virDomainBIOSDef bios;
 };
 
