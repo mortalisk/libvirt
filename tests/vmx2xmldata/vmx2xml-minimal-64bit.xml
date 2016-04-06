@@ -4,7 +4,7 @@
   <currentMemory unit='KiB'>32768</currentMemory>
   <vcpu placement='static'>1</vcpu>
   <os>
-    <type arch='x86_64'>hvm</type>
+    <type arch='x86_64' guestos='other-64'>hvm</type>
   </os>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>

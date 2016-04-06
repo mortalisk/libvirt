@@ -8,7 +8,7 @@
     <shares>1000</shares>
   </cputune>
   <os>
-    <type arch='i686'>hvm</type>
+    <type arch='i686' guestos='rhel5'>hvm</type>
   </os>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>

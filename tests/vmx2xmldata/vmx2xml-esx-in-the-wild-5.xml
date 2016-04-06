@@ -12,7 +12,7 @@
     <shares>2000</shares>
   </cputune>
   <os>
-    <type arch='x86_64'>hvm</type>
+    <type arch='x86_64' guestos='centos-64'>hvm</type>
   </os>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>
@@ -29,6 +29,11 @@
       <target dev='hda' bus='ide'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
+    <controller type='pci' index='0' model='pci-root'/>
+    <controller type='pci' index='4' model='pcie-root-port'/>
+    <controller type='pci' index='5' model='pcie-root-port'/>
+    <controller type='pci' index='6' model='pcie-root-port'/>
+    <controller type='pci' index='7' model='pcie-root-port'/>
     <controller type='scsi' index='0' model='lsilogic'/>
     <controller type='ide' index='0'/>
     <interface type='bridge'>

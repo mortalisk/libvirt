@@ -5,7 +5,7 @@
   <currentMemory unit='KiB'>120832</currentMemory>
   <vcpu placement='static' cpuset='0-2,5-7'>4</vcpu>
   <os>
-    <type arch='x86_64'>hvm</type>
+    <type arch='x86_64' guestos='ubuntu-64'>hvm</type>
   </os>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>
