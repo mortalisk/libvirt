@@ -1301,9 +1301,9 @@ virVMXParseConfig(virVMXContext *ctx,
     char *sched_cpu_shares = NULL;
     bool smbios_reflecthost = false;
     int pcibridge;
-    char *virtualdev;
-    char* present_config;
-    char* dev_config;
+    char *virtualdev = NULL;
+    char *present_config = NULL;
+    char *dev_config = NULL;
     int controller;
     int bus;
     int port;
